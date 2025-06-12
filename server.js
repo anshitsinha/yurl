@@ -7,10 +7,7 @@ const mongoURI =
   "mongodb+srv://ansi:123@yurl.w55quqf.mongodb.net/urlShortener?retryWrites=true&w=majority&appName=yurl";
 
 mongoose
-  .connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(mongoURI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
@@ -20,7 +17,7 @@ mongoose
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: false }));
 
-app.get("/", async (req, res) => {
+app.get("/admin", async (req, res) => {
   const shortUrls = await ShortUrl.find();
   res.render("index", { shortUrls: shortUrls });
 });
@@ -54,7 +51,6 @@ const axios = require("axios");
 app.post("/log-visit", express.json(), async (req, res) => {
   const shortCode = req.query.short || "unknown";
 
-  // Get real IP (handles proxies like Nginx, Cloudflare, etc.)
   const ip =
     req.headers["x-forwarded-for"]?.split(",")[0] ||
     req.connection.remoteAddress ||
@@ -80,13 +76,17 @@ app.post("/log-visit", express.json(), async (req, res) => {
   } catch (err) {
     console.warn("❌ Failed to fetch IP geolocation:", err.message);
   }
+
   console.log(location, "Logged with location");
+
   try {
     await VisitLog.create({
-      shortCode,
-      ip,
-      location,
-      info: req.body,
+      data: {
+        shortCode,
+        ip,
+        location,
+        info: req.body,
+      },
     });
 
     res.status(200).send("Logged with location");
@@ -95,5 +95,3 @@ app.post("/log-visit", express.json(), async (req, res) => {
     res.status(500).send("Error storing visit");
   }
 });
-
-app.listen(process.env.PORT || 5000);
