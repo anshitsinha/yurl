@@ -24,9 +24,54 @@ app.get("/admin", async (req, res) => {
 });
 
 app.post("/shortUrls", async (req, res) => {
-  await ShortUrl.create({ full: req.body.fullUrl });
+  const { fullUrl, customAlias } = req.body;
 
-  res.redirect("/");
+  // Check if custom alias exists
+  if (customAlias) {
+    const existing = await ShortUrl.findOne({ short: customAlias });
+    if (existing) {
+      return res.send(
+        "❌ Custom short URL already taken. Please choose another."
+      );
+    }
+
+    await ShortUrl.create({ full: fullUrl, short: customAlias });
+  } else {
+    // Auto-generate short if no custom alias provided
+    const randomShort = crypto.randomBytes(3).toString("hex");
+    await ShortUrl.create({ full: fullUrl, short: randomShort });
+  }
+
+  res.redirect("/admin");
+});
+
+app.get("/stats/:shortCode", async (req, res) => {
+  const shortCode = req.params.shortCode;
+  const shortUrl = await ShortUrl.findOne({ short: shortCode });
+  const i = shortUrl.full;
+
+  if (!shortUrl) return res.status(404).send("Short URL not found");
+
+  logs = await VisitLog.find({ "data.shortCode": i })
+    .sort({ "data.timestamp": -1 })
+    .limit(100); // Limit to 100 logs for performance
+  console.log(shortUrl);
+
+  // controller before rendering
+  function formatJsonForEJS(obj) {
+    return JSON.stringify(obj, null, 2)
+      .replace(/"(.*?)":/g, '"<span class="json-key">$1</span>":')
+      .replace(/: "([^"]*)"/g, ': "<span class="json-string">$1</span>"')
+      .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
+      .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
+      .replace(/: null/g, ': <span class="json-null">null</span>');
+  }
+
+  logs = logs.map((log) => ({
+    ...log,
+  }));
+
+  res.render("stats", { shortUrl, logs });
 });
 
 app.get("/:shortUrl", async (req, res) => {
@@ -38,11 +83,20 @@ app.get("/:shortUrl", async (req, res) => {
   shortUrl.clicks++;
   shortUrl.save();
 
+  const firstLog = {
+    ip: req.headers["x-forwarded-for"] || req.connection.remoteAddress,
+    userAgent: req.headers["user-agent"],
+    referer: req.headers["referer"] || req.headers["referrer"],
+    language: req.headers["accept-language"],
+    timestamp: new Date(),
+    shortUrl: req.params.shortUrl,
+  };
+
   // Log to server (optional)
   console.log(`Tracking visit to: ${req.params.shortUrl} => ${shortUrl.full}`);
 
   // Render EJS with redirect URL
-  res.render("logAndRedirect", { redirectUrl: shortUrl.full });
+  res.render("logAndRedirect", { redirectUrl: shortUrl.full, firstLog });
 });
 
 const VisitLog = require("./models/VisitLog");
@@ -51,7 +105,7 @@ const axios = require("axios");
 
 app.post("/log-visit", express.json(), async (req, res) => {
   const shortCode = req.query.short || "unknown";
-  const fingerprintData = req.body;
+  const { firstLog, ...fingerprintData } = req.body;
 
   // Get IP information (even if behind proxy)
   const ip =
@@ -183,6 +237,7 @@ app.post("/log-visit", express.json(), async (req, res) => {
       data: {
         shortCode,
         ip,
+        firstLog,
         rawLocation: location,
         rawFingerprint: fingerprintData,
         attackAnalysis,
