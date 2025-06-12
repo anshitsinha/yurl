@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const crypto = require("node:crypto");
 const ShortUrl = require("./models/shortUrl");
 const app = express();
-
+const VisitLog = require("./models/VisitLog");
 const mongoURI =
   "mongodb+srv://ansi:123@yurl.w55quqf.mongodb.net/urlShortener?retryWrites=true&w=majority&appName=yurl";
 
@@ -21,6 +21,9 @@ app.use(express.urlencoded({ extended: false }));
 app.get("/admin", async (req, res) => {
   const shortUrls = await ShortUrl.find();
   res.render("index", { shortUrls: shortUrls });
+});
+app.get("/", async (req, res) => {
+  res.render("home");
 });
 
 app.post("/shortUrls", async (req, res) => {
@@ -52,25 +55,11 @@ app.get("/stats/:shortCode", async (req, res) => {
 
   if (!shortUrl) return res.status(404).send("Short URL not found");
 
-  logs = await VisitLog.find({ "data.shortCode": i })
+  logs = await VisitLog.find({ shortCode: i })
     .sort({ "data.timestamp": -1 })
     .limit(100); // Limit to 100 logs for performance
-  console.log(shortUrl);
 
-  // controller before rendering
-  function formatJsonForEJS(obj) {
-    return JSON.stringify(obj, null, 2)
-      .replace(/"(.*?)":/g, '"<span class="json-key">$1</span>":')
-      .replace(/: "([^"]*)"/g, ': "<span class="json-string">$1</span>"')
-      .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
-      .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
-      .replace(/: null/g, ': <span class="json-null">null</span>');
-  }
-
-  logs = logs.map((log) => ({
-    ...log,
-  }));
-
+  console.log(logs);
   res.render("stats", { shortUrl, logs });
 });
 
@@ -98,8 +87,6 @@ app.get("/:shortUrl", async (req, res) => {
   // Render EJS with redirect URL
   res.render("logAndRedirect", { redirectUrl: shortUrl.full, firstLog });
 });
-
-const VisitLog = require("./models/VisitLog");
 
 const axios = require("axios");
 
@@ -234,20 +221,73 @@ app.post("/log-visit", express.json(), async (req, res) => {
   try {
     // Store in database with all analysis
     await VisitLog.create({
-      data: {
-        shortCode,
-        ip,
-        firstLog,
-        rawLocation: location,
-        rawFingerprint: fingerprintData,
-        attackAnalysis,
-        trackingHashes: {
-          canvas: attackAnalysis.trackingPotential.canvasHash,
-          webgl: attackAnalysis.trackingPotential.webglHash,
-          fonts: attackAnalysis.trackingPotential.fontHash,
-        },
-        timestamp: new Date(),
-      },
+      shortCode: shortCode || null,
+      ip: ip || null,
+
+      // Flattened firstLog (fixed keys)
+      firstLog_timestamp: firstLog?.timestamp || null,
+      firstLog_userAgent: firstLog?.userAgent || null,
+      firstLog_referer: firstLog?.referer || null, // ✅ fixed spelling
+      firstLog_language: firstLog?.language || null,
+      firstLog_platform: fingerprintData?.platform || null, // ✅ moved from fingerprintData
+
+      // Flattened user profile
+      likelyDeviceType: attackAnalysis.userProfile?.likelyDeviceType || null,
+      probableOS: attackAnalysis.userProfile?.probableOS || null,
+      techSavviness: attackAnalysis.userProfile?.techSavviness || null,
+      potentialWorkplace:
+        attackAnalysis.userProfile?.potentialWorkplace || null,
+
+      // Flattened location info
+      geoSource: location.source || null,
+      country: location.country || location.country_name || null,
+      countryCode: location.countryCode || location.country_code || null,
+      region: location.region || location.regionName || null,
+      city: location.city || null,
+      zip: location.zip || location.postal || null,
+      lat: location.lat || location.latitude || null,
+      lon: location.lon || location.longitude || null,
+      timezone: location.timezone || null,
+      isp: location.isp || null,
+      org: location.org || null,
+      as: location.as || location.asn || null,
+      mobile: location.mobile ?? null,
+      proxy: location.proxy ?? null,
+      hosting: location.hosting ?? null,
+
+      // Flattened behavior data
+      connectionType: fingerprintData.networkInfo?.effectiveType || null,
+      batteryCharging: fingerprintData.batteryInfo?.charging ?? null,
+      batteryLevel: fingerprintData.batteryInfo?.level ?? null,
+      preferredColorScheme:
+        fingerprintData.preferences?.darkMode === true
+          ? "dark"
+          : fingerprintData.preferences?.darkMode === false
+          ? "light"
+          : null,
+
+      // Flattened fingerprint hashes
+      canvasHash: attackAnalysis.trackingPotential?.canvasHash || null,
+      webglHash: attackAnalysis.trackingPotential?.webglHash || null,
+      fontHash: attackAnalysis.trackingPotential?.fontHash || null,
+
+      // Timezone mismatch + VPN info
+      browserTimezone: fingerprintData.timezoneInfo?.timezone || null,
+      timezoneMismatch:
+        location.timezone && fingerprintData.timezoneInfo?.timezone
+          ? !timezonesMatch(
+              location.timezone,
+              fingerprintData.timezoneInfo.timezone
+            )
+          : null,
+      usingVPN: location.proxy ?? location.hosting ?? null,
+
+      // Raw data
+      rawLocation: location || null,
+      rawFingerprint: fingerprintData || null,
+      fullAnalysis: attackAnalysis || null,
+
+      timestamp: new Date(),
     });
   } catch (err) {
     console.error("❌ Visit logging failed:", err);

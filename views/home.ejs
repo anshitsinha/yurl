@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sylph - Next.js Portfolio Starter</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #111;
+        color: #eeeeee;
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 640px;
+        width: 100%;
+      }
+
+      .header {
+        margin-bottom: 40px;
+      }
+
+      .title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: -6px;
+        letter-spacing: -0.01em;
+      }
+
+      .subtitle {
+        font-size: 1.1rem;
+        color: #606060;
+        margin-bottom: 20px;
+        font-weight: 500;
+      }
+
+      .description {
+        font-size: 1rem;
+        color: #eeeeee;
+
+        margin-bottom: 20px;
+      }
+
+      .section {
+        margin-bottom: 32px;
+      }
+
+      .section-title {
+        font-size: inherit;
+        font-weight: 500;
+        color: #606060;
+
+        font-weight: 500;
+
+        padding: 0.5rem 0;
+      }
+
+      .guides-list,
+      .examples-list {
+        list-style: none;
+      }
+
+      .list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+
+        transition: all 0.2s ease;
+      }
+
+      a:hover {
+        opacity: 0.5;
+      }
+
+      .list-item:last-child {
+        border-bottom: none;
+      }
+
+      .item-title {
+        font-size: 1rem;
+        color: #eeeeee;
+        font-weight: 400;
+      }
+
+      .item-date {
+        font-size: 0.9rem;
+        color: #606060;
+      }
+
+      .footer {
+        margin-top: 64px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 15px;
+        border-top: 1px solid #2a2a2a;
+      }
+
+      .border {
+        border-top: 1px solid #2a2a2a;
+      }
+
+      .built-with {
+        font-size: 0.9rem;
+        color: #606060;
+      }
+
+      .theme-toggle {
+        display: flex;
+        gap: 8px;
+      }
+
+      .icon-button {
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: 1px solid #333333;
+        border-radius: 4px;
+        color: #606060;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+      }
+
+      .icon-button:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: #555555;
+        color: #eeeeee;
+      }
+
+      .deploy-button {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333333;
+        color: #eeeeee;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .deploy-button:hover {
+        background: #444444;
+      }
+
+      .deploy-icon {
+        width: 16px;
+        height: 16px;
+      }
+
+      @media (max-width: 768px) {
+        .title {
+          font-size: 2rem;
+        }
+
+        .container {
+          padding: 0 16px;
+        }
+
+        .list-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+        }
+
+        .item-date {
+          font-size: 0.8rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1 class="title">Anshit</h1>
+        <p class="subtitle">Software Developer</p>
+        <p class="description">
+          Sylph is a Next.js Portfolio Starter that you can use to create your
+          own portfolio website. It is designed to be minimal, lightweight, and
+          fast. It is also highly customizable, so you can easily make it your
+          own. Sylph is perfect for developers, designers, and other creatives
+          who want to showcase their work. To start using Sylph, you can follow
+          the guides below.
+        </p>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Guides (3)</p>
+        <ul class="guides-list">
+          <div class="border"></div>
+          <a class="list-item">
+            <span class="item-title">Getting Started</span>
+            <span class="item-date">Oct 12, 2024</span>
+          </a>
+          <div class="border"></div>
+          <a class="list-item">
+            <span class="item-title">Project Structure</span>
+            <span class="item-date">Sep 30, 2024</span>
+          </a>
+          <div class="border"></div>
+          <a class="list-item">
+            <span class="item-title">Basic Writing and Formatting Syntax</span>
+            <span class="item-date">Sep 18, 2024</span>
+          </a>
+        </ul>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Examples (1)</p>
+        <div class="border"></div>
+        <ul class="examples-list">
+          <li class="list-item">
+            <span class="item-title">Component Showcase</span>
+            <span class="item-date">Sep 18, 2024</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer">
+        <span class="built-with">Built with Next.js</span>
+        <div class="theme-toggle">
+          <button class="icon-button" title="Toggle theme">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path d="m12 2 3 10L12 22l-3-10z" />
+            </svg>
+          </button>
+          <button class="icon-button" title="System theme">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="m22 7-10 5L2 7" />
+            </svg>
+          </button>
+          <button class="icon-button" title="Light mode">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <path
+                d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Add hover effects and basic interactivity
+      document.querySelectorAll(".list-item").forEach((item) => {
+        item.addEventListener("click", function () {
+          console.log(
+            "Clicked:",
+            this.querySelector(".item-title").textContent
+          );
+        });
+      });
+
+      // Theme toggle functionality (basic)
+      document.querySelectorAll(".icon-button").forEach((button) => {
+        button.addEventListener("click", function () {
+          console.log("Theme toggle clicked");
+        });
+      });
+
+      // Deploy button functionality
+      document
+        .querySelector(".deploy-button")
+        .addEventListener("click", function () {
+          console.log("Deploy clicked");
+        });
+    </script>
+  </body>
+</html>
