@@ -1,34 +1,44 @@
-const express = require('express')
-const mongoose = require('mongoose')
-const ShortUrl = require('./models/shortUrl')
-const app = express()
+const express = require("express");
+const mongoose = require("mongoose");
+const ShortUrl = require("./models/shortUrl");
+const app = express();
 
-mongoose.connect('mongodb://localhost/urlShortener', {
-  useNewUrlParser: true, useUnifiedTopology: true
-})
+const mongoURI =
+  "mongodb+srv://ansi:123@yurl.w55quqf.mongodb.net/urlShortener?retryWrites=true&w=majority&appName=yurl";
 
-app.set('view engine', 'ejs')
-app.use(express.urlencoded({ extended: false }))
+mongoose
+  .connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1);
+  });
 
-app.get('/', async (req, res) => {
-  const shortUrls = await ShortUrl.find()
-  res.render('index', { shortUrls: shortUrls })
-})
+app.set("view engine", "ejs");
+app.use(express.urlencoded({ extended: false }));
 
-app.post('/shortUrls', async (req, res) => {
-  await ShortUrl.create({ full: req.body.fullUrl })
+app.get("/admin", async (req, res) => {
+  const shortUrls = await ShortUrl.find();
+  res.render("index", { shortUrls: shortUrls });
+});
 
-  res.redirect('/')
-})
+app.post("/shortUrls", async (req, res) => {
+  await ShortUrl.create({ full: req.body.fullUrl });
 
-app.get('/:shortUrl', async (req, res) => {
-  const shortUrl = await ShortUrl.findOne({ short: req.params.shortUrl })
-  if (shortUrl == null) return res.sendStatus(404)
+  res.redirect("/");
+});
 
-  shortUrl.clicks++
-  shortUrl.save()
+app.get("/:shortUrl", async (req, res) => {
+  const shortUrl = await ShortUrl.findOne({ short: req.params.shortUrl });
+  if (shortUrl == null) return res.sendStatus(404);
 
-  res.redirect(shortUrl.full)
-})
+  shortUrl.clicks++;
+  shortUrl.save();
+
+  res.redirect(shortUrl.full);
+});
 
 app.listen(process.env.PORT || 5000);
