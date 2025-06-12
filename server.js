@@ -18,6 +18,7 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: false }));
 
 app.get("/admin", async (req, res) => {
+  console.log(res);
   const shortUrls = await ShortUrl.find();
   res.render("index", { shortUrls: shortUrls });
 });
@@ -95,3 +96,5 @@ app.post("/log-visit", express.json(), async (req, res) => {
     res.status(500).send("Error storing visit");
   }
 });
+
+app.listen(process.env.PORT || 5000);
