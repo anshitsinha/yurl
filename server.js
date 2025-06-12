@@ -32,6 +32,9 @@ app.post("/shortUrls", async (req, res) => {
 });
 
 app.get("/:shortUrl", async (req, res) => {
+  if (req.params.shortUrl === "admin") {
+    return res.redirect("/admin");
+  }
   const shortUrl = await ShortUrl.findOne({ short: req.params.shortUrl });
   if (!shortUrl) return res.sendStatus(404);
   shortUrl.clicks++;
