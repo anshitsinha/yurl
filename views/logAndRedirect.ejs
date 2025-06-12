@@ -1,0 +1,83 @@
+<!-- views/logAndRedirect.ejs -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Logging Visit Info...</title>
+</head>
+<body>
+  <h3>🔍 Logging device info. You'll be redirected shortly...</h3>
+
+  <script>
+    async function logAndRedirect() {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.textBaseline = "top";
+      ctx.font = "14px 'Arial'";
+      ctx.fillText("fingerprint", 2, 2);
+      const canvasData = canvas.toDataURL();
+
+      let gpuInfo = {};
+      try {
+        const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+        gpuInfo = {
+          vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+          renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+        };
+      } catch {}
+
+      let batteryInfo = {};
+      if (navigator.getBattery) {
+        try {
+          const battery = await navigator.getBattery();
+          batteryInfo = {
+            level: battery.level,
+            charging: battery.charging,
+            chargingTime: battery.chargingTime,
+            dischargingTime: battery.dischargingTime
+          };
+        } catch {}
+      }
+
+      const info = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screen: { width: screen.width, height: screen.height },
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        localTime: new Date().toString(),
+        cookieEnabled: navigator.cookieEnabled,
+        deviceMemory: navigator.deviceMemory,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+        maxTouchPoints: navigator.maxTouchPoints,
+        connection: navigator.connection ? {
+          type: navigator.connection.type,
+          effectiveType: navigator.connection.effectiveType,
+          downlink: navigator.connection.downlink
+        } : "Not supported",
+        darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+        gpuInfo,
+        batteryInfo,
+        canvasFingerprint: canvasData.substring(0, 50) + '...'
+      };
+
+      try {
+        await fetch("/log-visit?short=<%= redirectUrl %>", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(info)
+        });
+      } catch (e) {
+        console.error("Logging failed", e);
+      }
+
+      setTimeout(() => {
+        window.location.href = "<%= redirectUrl %>";
+      }, 2000);
+    }
+
+    window.onload = logAndRedirect;
+  </script>
+</body>
+</html>

@@ -33,12 +33,64 @@ app.post("/shortUrls", async (req, res) => {
 
 app.get("/:shortUrl", async (req, res) => {
   const shortUrl = await ShortUrl.findOne({ short: req.params.shortUrl });
-  if (shortUrl == null) return res.sendStatus(404);
-
+  if (!shortUrl) return res.sendStatus(404);
   shortUrl.clicks++;
   shortUrl.save();
 
-  res.redirect(shortUrl.full);
+  // Log to server (optional)
+  console.log(`Tracking visit to: ${req.params.shortUrl} => ${shortUrl.full}`);
+
+  // Render EJS with redirect URL
+  res.render("logAndRedirect", { redirectUrl: shortUrl.full });
+});
+
+const VisitLog = require("./models/VisitLog");
+
+const axios = require("axios");
+
+app.post("/log-visit", express.json(), async (req, res) => {
+  const shortCode = req.query.short || "unknown";
+
+  // Get real IP (handles proxies like Nginx, Cloudflare, etc.)
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.connection.remoteAddress ||
+    "unknown";
+
+  let location = {};
+  try {
+    const geoRes = await axios.get(`http://ip-api.com/json/${ip}`);
+    console.log(geoRes);
+    if (geoRes.data.status === "success") {
+      location = {
+        country: geoRes.data.country,
+        regionName: geoRes.data.regionName,
+        city: geoRes.data.city,
+        zip: geoRes.data.zip,
+        lat: geoRes.data.lat,
+        lon: geoRes.data.lon,
+        isp: geoRes.data.isp,
+        org: geoRes.data.org,
+        as: geoRes.data.as,
+      };
+    }
+  } catch (err) {
+    console.warn("❌ Failed to fetch IP geolocation:", err.message);
+  }
+  console.log(location, "Logged with location");
+  try {
+    await VisitLog.create({
+      shortCode,
+      ip,
+      location,
+      info: req.body,
+    });
+
+    res.status(200).send("Logged with location");
+  } catch (err) {
+    console.error("❌ Visit logging failed:", err);
+    res.status(500).send("Error storing visit");
+  }
 });
 
 app.listen(process.env.PORT || 5000);
