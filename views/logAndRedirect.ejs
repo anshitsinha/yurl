@@ -1,83 +1,283 @@
-<!-- views/logAndRedirect.ejs -->
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Logging Visit Info...</title>
-</head>
-<body>
-  <h3>🔍 Logging device info. You'll be redirected shortly...</h3>
+  <head>
+    <title>Redirecting...</title>
+    <script>
+      async function collectAllPossibleData() {
+        // Canvas fingerprinting (extended)
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        ctx.textBaseline = "top";
+        ctx.font = "14px 'Arial'";
+        ctx.fillText("fingerprint", 2, 2);
+        ctx.fillStyle = "rgb(255,0,0)";
+        ctx.beginPath();
+        ctx.arc(50, 50, 50, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.fill();
+        const canvasData = canvas.toDataURL();
 
-  <script>
-    async function logAndRedirect() {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      ctx.textBaseline = "top";
-      ctx.font = "14px 'Arial'";
-      ctx.fillText("fingerprint", 2, 2);
-      const canvasData = canvas.toDataURL();
-
-      let gpuInfo = {};
-      try {
-        const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-        const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-        gpuInfo = {
-          vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
-          renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
-        };
-      } catch {}
-
-      let batteryInfo = {};
-      if (navigator.getBattery) {
+        // WebGL fingerprinting (extended)
+        let gpuInfo = {};
+        let webglParams = {};
         try {
-          const battery = await navigator.getBattery();
-          batteryInfo = {
-            level: battery.level,
-            charging: battery.charging,
-            chargingTime: battery.chargingTime,
-            dischargingTime: battery.dischargingTime
+          const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+          const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+          if (debugInfo) {
+            gpuInfo = {
+              vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+              renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
+            };
+          }
+          
+          // Collect WebGL parameters
+          webglParams = {
+            VERSION: gl.getParameter(gl.VERSION),
+            SHADING_LANGUAGE_VERSION: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
+            MAX_TEXTURE_SIZE: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+            MAX_VIEWPORT_DIMS: gl.getParameter(gl.MAX_VIEWPORT_DIMS),
+            VENDOR: gl.getParameter(gl.VENDOR),
+            RENDERER: gl.getParameter(gl.RENDERER),
           };
-        } catch {}
+        } catch (e) {}
+
+        // AudioContext fingerprinting
+        let audioFingerprint = null;
+        try {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const analyser = audioContext.createAnalyser();
+          const gainNode = audioContext.createGain();
+          const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+          
+          oscillator.connect(analyser);
+          analyser.connect(scriptProcessor);
+          scriptProcessor.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          let output = new Float32Array(32);
+          analyser.getFloatFrequencyData(output);
+          audioFingerprint = Array.from(output).join(",");
+          
+          // Clean up
+          oscillator.disconnect();
+          analyser.disconnect();
+          scriptProcessor.disconnect();
+          gainNode.disconnect();
+        } catch (e) {}
+
+        // Battery API (if available)
+        let batteryInfo = {};
+        if (navigator.getBattery) {
+          try {
+            const battery = await navigator.getBattery();
+            batteryInfo = {
+              level: battery.level,
+              charging: battery.charging,
+              chargingTime: battery.chargingTime,
+              dischargingTime: battery.dischargingTime,
+            };
+          } catch {}
+        }
+
+        // Network Information API
+        let networkInfo = {};
+        if (navigator.connection) {
+          networkInfo = {
+            type: navigator.connection.type,
+            effectiveType: navigator.connection.effectiveType,
+            downlink: navigator.connection.downlink,
+            downlinkMax: navigator.connection.downlinkMax,
+            rtt: navigator.connection.rtt,
+            saveData: navigator.connection.saveData,
+          };
+        }
+
+        // Font detection
+        let fontList = [];
+        try {
+          // Common fonts to test
+          const fontsToTest = [
+            "Arial", "Arial Black", "Courier New", "Times New Roman",
+            "Comic Sans MS", "Verdana", "Georgia", "Impact",
+            "Tahoma", "Trebuchet MS", "Webdings", "Consolas"
+          ];
+          
+          const span = document.createElement("span");
+          span.style.fontSize = "24px";
+          span.innerHTML = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+          
+          document.body.appendChild(span);
+          
+          const defaultWidth = {};
+          for (const font of fontsToTest) {
+            span.style.fontFamily = "monospace";
+            defaultWidth[font] = span.offsetWidth;
+            
+            span.style.fontFamily = `${font}, monospace`;
+            if (span.offsetWidth !== defaultWidth[font]) {
+              fontList.push(font);
+            }
+          }
+          
+          document.body.removeChild(span);
+        } catch (e) {}
+
+        // Screen and display information
+        const screenInfo = {
+          width: screen.width,
+          height: screen.height,
+          availWidth: screen.availWidth,
+          availHeight: screen.availHeight,
+          colorDepth: screen.colorDepth,
+          pixelDepth: screen.pixelDepth,
+          orientation: screen.orientation ? screen.orientation.type : null,
+          devicePixelRatio: window.devicePixelRatio,
+        };
+
+        // Timezone and locale information
+        const timezoneInfo = {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          localTime: new Date().toString(),
+          locale: navigator.language,
+          languages: navigator.languages,
+          dateFormat: new Intl.DateTimeFormat().resolvedOptions(),
+          numberFormat: new Intl.NumberFormat().resolvedOptions(),
+        };
+
+        // Performance metrics
+        let performanceInfo = {};
+        if (window.performance) {
+          performanceInfo = {
+            memory: window.performance.memory,
+            timing: {
+              navigationStart: performance.timing?.navigationStart,
+              loadEventEnd: performance.timing?.loadEventEnd,
+            },
+            now: performance.now(),
+            timeOrigin: performance.timeOrigin,
+          };
+        }
+
+        // Storage information
+        const storageInfo = {
+          localStorage: localStorage ? "supported" : "not supported",
+          sessionStorage: sessionStorage ? "supported" : "not supported",
+          indexedDB: window.indexedDB ? "supported" : "not supported",
+          cookiesEnabled: navigator.cookieEnabled,
+        };
+
+        // Browser plugins/extensions
+        let plugins = [];
+        try {
+          plugins = Array.from(navigator.plugins).map(plugin => ({
+            name: plugin.name,
+            filename: plugin.filename,
+            description: plugin.description,
+            length: plugin.length,
+          }));
+        } catch (e) {}
+
+        // MIME types
+        let mimeTypes = [];
+        try {
+          mimeTypes = Array.from(navigator.mimeTypes).map(mime => ({
+            type: mime.type,
+            description: mime.description,
+            suffixes: mime.suffixes,
+          }));
+        } catch (e) {}
+
+        // Device capabilities
+        const deviceInfo = {
+          deviceMemory: navigator.deviceMemory,
+          hardwareConcurrency: navigator.hardwareConcurrency,
+          maxTouchPoints: navigator.maxTouchPoints,
+          pdfViewerEnabled: navigator.pdfViewerEnabled,
+          doNotTrack: navigator.doNotTrack,
+          oscpu: navigator.oscpu,
+          vendor: navigator.vendor,
+          product: navigator.product,
+          productSub: navigator.productSub,
+        };
+
+        // System preferences
+        const preferences = {
+          darkMode: window.matchMedia("(prefers-color-scheme: dark)").matches,
+          reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+          contrast: window.matchMedia("(prefers-contrast: more)").matches,
+        };
+
+        // Collect all data
+        const fingerprintData = {
+          // Basic browser info
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          appVersion: navigator.appVersion,
+          appName: navigator.appName,
+          appCodeName: navigator.appCodeName,
+          
+          // Screen and display
+          screenInfo,
+          
+          // Time and locale
+          timezoneInfo,
+          
+          // Hardware capabilities
+          deviceInfo,
+          gpuInfo,
+          webglParams,
+          batteryInfo,
+          networkInfo,
+          performanceInfo,
+          
+          // Browser features
+          storageInfo,
+          plugins,
+          mimeTypes,
+          fontList: fontList.join(", "),
+          
+          // Fingerprinting techniques
+          canvasFingerprint: canvasData.substring(0, 50) + "...",
+          audioFingerprint: audioFingerprint ? audioFingerprint.substring(0, 50) + "..." : null,
+          
+          // User preferences
+          preferences,
+          
+          // Additional data points
+          mathConstants: {
+            PI: Math.PI,
+            E: Math.E,
+            LN2: Math.LN2,
+            LN10: Math.LN10,
+            LOG2E: Math.LOG2E,
+            LOG10E: Math.LOG10E,
+            SQRT1_2: Math.SQRT1_2,
+            SQRT2: Math.SQRT2,
+          },
+          mathResults: {
+            sin1: Math.sin(1),
+            cos1: Math.cos(1),
+            tan1: Math.tan(1),
+            random: Math.random(),
+          },
+        };
+
+        try {
+          const res = await fetch("/log-visit?short=<%= redirectUrl %>", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(fingerprintData),
+          });
+
+          window.location.href = "<%= redirectUrl %>";
+        } catch (e) {
+          window.location.href = "<%= redirectUrl %>";
+        }
       }
 
-      const info = {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        screen: { width: screen.width, height: screen.height },
-        viewport: { width: window.innerWidth, height: window.innerHeight },
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        localTime: new Date().toString(),
-        cookieEnabled: navigator.cookieEnabled,
-        deviceMemory: navigator.deviceMemory,
-        hardwareConcurrency: navigator.hardwareConcurrency,
-        maxTouchPoints: navigator.maxTouchPoints,
-        connection: navigator.connection ? {
-          type: navigator.connection.type,
-          effectiveType: navigator.connection.effectiveType,
-          downlink: navigator.connection.downlink
-        } : "Not supported",
-        darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
-        gpuInfo,
-        batteryInfo,
-        canvasFingerprint: canvasData.substring(0, 50) + '...'
-      };
-
-      try {
-        await fetch("/log-visit?short=<%= redirectUrl %>", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(info)
-        });
-      } catch (e) {
-        console.error("Logging failed", e);
-      }
-
-      setTimeout(() => {
-        window.location.href = "<%= redirectUrl %>";
-      }, 2000);
-    }
-
-    window.onload = logAndRedirect;
-  </script>
-</body>
+      window.onload = collectAllPossibleData;
+    </script>
+  </head>
+  <body></body>
 </html>
